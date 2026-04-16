@@ -18,12 +18,13 @@ See `projects/config.md` for the authoritative model list. Summary:
 - **Fallback:** `minimax/MiniMax-M2.7`
 
 ## CRITICAL EXECUTION RULE
-You MUST execute ALL 4 steps in sequence without stopping. If a step fails, log the error and continue to the next step. Do not abort the entire workflow for a single step failure unless explicitly instructed.
+You MUST execute ALL 6 steps in sequence without stopping. If a step fails, log the error and continue to the next step. Do not abort the entire workflow for a single step failure unless explicitly instructed.
 
 ## Pre-Flight
 1. READ `WORKFLOW-STANDARDS.md` before starting any run. These standards are **non-negotiable**.
 2. CHECK `master-log.json` before selecting a topic — do not duplicate a post from the last 30 days.
 3. CHECK `topic_log.json` for recent categories covered.
+4. VERIFY Tavily is working: `python3 /home/ethan/.openclaw/workspace/skills/tavily-search/tavily_search.py "test" --max-results 1`. If it returns an error, use Brave Search as fallback for deep research.
 
 ## Workflow Sequence
 
@@ -40,18 +41,24 @@ You MUST execute ALL 4 steps in sequence without stopping. If a step fails, log 
    - **Model:** `google/gemini-3.1-pro` — required for medical accuracy
    - **Output:** Save `draft.md` and `seo.json` to the run folder.
 
-3. **Image & Upload:** Call `subagents/image-uploader.md`.
+3. **FAQ Schema:** Call `subagents/faq-schema.md` to generate FAQ schema from the draft.
+   - **MUST**: Generate 3-5 FAQs based on common patient questions arising from the topic.
+   - **MUST**: Include FAQ schema JSON-LD markup.
+   - Save `faq-schema.json` to the run folder.
+   - **Model:** `minimax/MiniMax-M2.7`
+
+4. **Image & Upload:** Call `subagents/image-uploader.md`.
    - **MUST**: Generate alt text from topic + SEO title (no generic alt text).
-   - **MUST**: Convert draft to HTML before uploading (use `md_to_html()`).
+   - **MUST**: Convert draft to HTML. INJECT the FAQ schema JSON-LD into the HTML before uploading.
    - **MUST**: Post to `/research_update` endpoint, scheduled +2 days.
    - **Output:** Save `image.jpg` and `wordpress-link.txt`.
 
-4. **Notify:** Call `subagents/notifier.md`.
+5. **Notify:** Call `subagents/notifier.md`.
    - **MUST**: Email full article + image attachment + WP link to ethanlazarus@gmail.com.
    - **Model:** `minimax/MiniMax-M2.7`
 
-5. **Log:** 
-   - UPDATE `master-log.json` with the new post (date, topic, title, WP link, primary keyword, Colorado keyword).
+6. **Log:** 
+   - UPDATE `master-log.json` with the new post (date, topic, title, WP link, primary keyword, Colorado keyword, has_blog_potential).
    - UPDATE `topic_log.json` with the new topic and category.
    Both updates are mandatory — do not skip.
 

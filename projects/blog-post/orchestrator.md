@@ -32,18 +32,21 @@ You MUST execute ALL 9 steps in sequence without stopping or asking for permissi
 
 ## Workflow Sequence
 1. **Create Run Folder:** Create `projects/blog-post/posts/YYYY-MM-DD/` using today's date before any other step.
-2. **Writer:** Call `subagents/writer.md` with the provided topic or link to draft the post. Save to run folder. **MUST: Under 500 words (target: 380-480).** **Model:** `google/gemini-3.1-pro` — required for medical accuracy
-3. **SEO:** Call `subagents/seo-optimizer.md` with the draft to generate local SEO metadata. **MUST: Include Colorado/Denver keywords in title, description, and focus keywords.** Save to run folder. **Model:** `minimax/MiniMax-M2.7`
-4. **Image:** Call `subagents/image-generator.md` with the topic and SEO title to generate the featured image using `google/gemini-3.1-flash-image-preview` (alias: `nano-banana`). Save image to run folder. **Model:** `google/gemini-3.1-flash-image-preview` — do NOT use `gemini-3.1-pro-image-preview-v2` or any other image model variant.
-5. **Editor:** Call `subagents/editor.md` to assemble the post, ensuring an 8th-grade reading level and "pretty" formatting. Tone: friendly, scientific, with occasional humor. Save to run folder. **Model:** `minimax/MiniMax-M2.7`
-6. **Media Upload:** Call `subagents/wp-media-uploader.md` to upload the generated image to WordPress. **MUST: Pass descriptive alt_text generated from topic and SEO title.** Example: for "Orforglipron: The Oral GLP-1 Revolution" → alt_text="A capsule medication beside a glass of water, representing an oral weight-loss treatment option". **Model:** `minimax/MiniMax-M2.7`
-7. **Article Upload:** Call `subagents/wp-article-uploader.md` to create a draft post on WordPress, scheduled for +7 days, with the featured image and SEO metadata. **Model:** `minimax/MiniMax-M2.7`
-8. **Notify:** Call `subagents/notifier.md` to email the final copy and WordPress link to Dr. Lazarus for review. **Model:** `minimax/MiniMax-M2.7`
-9. **Log:** UPDATE `master-log.json` with the new post (date, topic, title, WP link, primary keyword, Colorado keyword). This step is mandatory — do not skip.
+2. **Topic Generator (conditional):** If no topic was provided, call `subagents/topic-generator.md` to generate 3 ranked topic recommendations from the keyword map. Auto-select rank 1. If topic WAS provided, skip this step and use the provided topic.
+3. **Writer:** Call `subagents/writer.md` with the topic and any provided link to draft the post. Save to run folder. **MUST: Under 500 words (target: 380-480).** **Model:** `google/gemini-3.1-pro` — required for medical accuracy
+4. **SEO:** Call `subagents/seo-optimizer.md` with the draft to generate local SEO metadata. **MUST: Include Colorado/Denver keywords in title, description, and focus keywords.** Save to run folder. **Model:** `minimax/MiniMax-M2.7`
+5. **Image:** Call `subagents/image-generator.md` with the topic and SEO title to generate the featured image using `google/gemini-3.1-flash-image-preview` (alias: `nano-banana`). Save image to run folder. **Model:** `google/gemini-3.1-flash-image-preview` — do NOT use `gemini-3.1-pro-image-preview-v2` or any other image model variant.
+6. **Editor:** Call `subagents/editor.md` to assemble the post, ensuring an 8th-grade reading level and "pretty" formatting. Tone: friendly, scientific, with occasional humor. Save to run folder. **Model:** `minimax/MiniMax-M2.7`
+7. **FAQ Schema:** Call `subagents/faq-schema.md` to generate FAQ schema for the post. Inject the FAQ into the HTML before upload. Save `faq-schema.json` to run folder. **Model:** `minimax/MiniMax-M2.7`
+8. **Media Upload:** Call `subagents/wp-media-uploader.md` to upload the generated image to WordPress. **MUST: Pass descriptive alt_text generated from topic and SEO title.** **Model:** `minimax/MiniMax-M2.7`
+9. **Article Upload:** Call `subagents/wp-article-uploader.md` to create a draft post on WordPress, scheduled for +7 days, with the featured image, SEO metadata, and FAQ schema. **Model:** `minimax/MiniMax-M2.7`
+10. **Notify:** Call `subagents/notifier.md` to email the final copy and WordPress link to Dr. Lazarus for review. **Model:** `minimax/MiniMax-M2.7`
+11. **Log:** UPDATE `master-log.json` with the new post (date, topic, title, WP link, primary keyword, Colorado keyword). Flag `has_blog_potential: false` (blog posts don't feed themselves). This step is mandatory — do not skip.
 
 ## Trigger Instructions
-When calling this orchestrator, provide:
-- `topic`: The subject of the blog post.
+When calling this orchestrator:
+- If `topic` is provided: skip Step 0, go directly to Step 2 (Writer).
+- If no `topic` provided: run Step 0 (Topic Generator) first to get recommendations.
 - `link` (optional): A URL to summarize or use as a source.
 
 ## Subagents Folder
