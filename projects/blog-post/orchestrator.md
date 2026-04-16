@@ -22,8 +22,13 @@ You MUST execute ALL 9 steps in sequence without stopping or asking for permissi
 
 ## Pre-Flight
 1. READ `WORKFLOW-STANDARDS.md` before starting any run. These standards are **non-negotiable**.
-2. CHECK `master-log.json` before selecting a topic — do not duplicate a post from the last 60 days.
+2. CHECK `master-log.json` — do not duplicate a post from the last 60 days.
 3. CHECK the `posts/` folder for recently covered topics.
+4. FETCH the last 20 published blog posts from WordPress:
+   ```
+   node /home/ethan/.openclaw/workspace/skills/wordpress/scripts/wp-cli.js posts:list --query post_type=post,per_page=20,status=publish
+   ```
+   Parse the titles. If the provided topic matches or closely overlaps with a recently published post, flag it. If the same topic was published in the last 60 days, ask the orchestrator to pick a different topic before proceeding.
 
 ## Workflow Sequence
 1. **Create Run Folder:** Create `projects/blog-post/posts/YYYY-MM-DD/` using today's date before any other step.

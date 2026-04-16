@@ -8,14 +8,19 @@ Select a relevant clinical research topic AND scan the web for the latest news i
 
 ## Steps
 1. **History Check:** Read `projects/research-post/master-log.json` and `topic_log.json` to avoid duplicating topics covered in the last 30 days.
-2. **Web Research FIRST:** Search for clinical news published in the **last 24 hours only**. Use `web_search` with `freshness: "day"`. Search for: GLP-1 medications, obesity treatments, FDA approvals, new clinical studies, major medical conference announcements.
-3. **Topic Selection:**
+2. **WordPress Check:** Fetch the last 20 published research posts from WordPress using the wp-cli:
+   ```
+   node /home/ethan/.openclaw/workspace/skills/wordpress/scripts/wp-cli.js posts:list --query post_type=research_update,per_page=20,status=publish
+   ```
+   Parse the titles. If a published post covers the same topic or very similar angle, skip it and pick a different one.
+3. **Web Research FIRST:** Search for clinical news published in the **last 24 hours only**. Use `web_search` with `freshness: "day"`. Search for: GLP-1 medications, obesity treatments, FDA approvals, new clinical studies, major medical conference announcements.
+4. **Topic Selection:**
    - If compelling 24-hour news found: use it as the topic.
    - If no topic provided AND no compelling 24-hour news: output `ABORT_WORKFLOW` and exit. Do NOT fall back to older news.
    - If topic provided by orchestrator: verify it has 24-hour relevance before proceeding.
-4. **Colorado Relevance Check:** Confirm the topic has a Colorado/Denver angle before proceeding. If the news has no Colorado connection, note how it connects to CNC's patients in Greenwood Village/Denver metro.
-5. **Duplicate Check:** Cross-reference `master-log.json` and `topic_log.json`. If the same or very similar topic was covered in the last 30 days, pick a different angle or `ABORT_WORKFLOW`.
-6. **Output:** Save a JSON file `topic-research.json` with:
+5. **Colorado Relevance Check:** Confirm the topic has a Colorado/Denver angle before proceeding. If the news has no Colorado connection, note how it connects to CNC's patients in Greenwood Village/Denver metro.
+6. **Duplicate Check:** Cross-reference `master-log.json`, `topic_log.json`, AND the WordPress post titles. If the same or very similar topic was covered in the last 30 days, pick a different angle or `ABORT_WORKFLOW`.
+7. **Output:** Save a JSON file `topic-research.json` with:
    ```json
    {
      "topic": "Selected topic title",
