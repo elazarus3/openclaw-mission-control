@@ -54,7 +54,12 @@ Target high-volume "near me" and geo-specific keywords that CNC can realisticall
 **Category:** Service / Educational
 **Status:** PENDING
 
+## Cadence
+**Weekly — every Monday at 8 AM MT** (cron: `Weekly Blog Post (Local SEO)`)
+
 ## Execution Notes
 - Each post must include: local SEO keywords, FAQ schema, featured image with Colorado alt text, <500 words
 - After writing each post, update this tracker with the WordPress link
 - These posts should NOT duplicate research posts — they are patient-facing service/educational content
+- Rotate through the keyword targets below — pick the highest-priority undrafted post each week
+- Commit changes after each post goes live
