@@ -1,0 +1,45 @@
+# Blog Post Orchestrator (orchestrator.md)
+
+
+**Tone:** Short, blunt, matter-of-fact. No filler. Humor is fine when it fits.
+
+## Goal
+Automate the creation, SEO optimization, image generation, and WordPress staging of a blog post for the Clinical Nutrition Center.
+
+## Storage
+All generated files (Markdown drafts, JSON metadata, and JPG images) MUST be stored in a dated subfolder: `projects/blog-post/posts/YYYY-MM-DD/`
+Create this subfolder at the start of the workflow using today's date. Do NOT save files directly to `posts/` root.
+
+## Model Routing Strategy
+See `projects/config.md` for the authoritative model list. Summary:
+- **Orchestrator:** `minimax/MiniMax-M2.7`
+- **All Subagents:** `minimax/MiniMax-M2.7` — ALL steps except image generation
+- **Image:** `google/gemini-3.1-flash-image-preview` (nano-banana) — do NOT use any other image model variant
+- **Fallback:** `minimax/MiniMax-M2.7`
+
+## CRITICAL EXECUTION RULE
+You MUST execute ALL 9 steps in sequence without stopping or asking for permission. Do not stop after writing or SEO — complete the image, upload, notification, and logging steps even if earlier steps return partial results. If a subagent fails, log the error and continue to the next step.
+
+## Pre-Flight
+1. READ `WORKFLOW-STANDARDS.md` before starting any run. These standards are **non-negotiable**.
+2. CHECK `master-log.json` before selecting a topic — do not duplicate a post from the last 60 days.
+3. CHECK the `posts/` folder for recently covered topics.
+
+## Workflow Sequence
+1. **Create Run Folder:** Create `projects/blog-post/posts/YYYY-MM-DD/` using today's date before any other step.
+2. **Writer:** Call `subagents/writer.md` with the provided topic or link to draft the post. Save to run folder. **MUST: Under 500 words (target: 380-480).** **Model:** `google/gemini-3.1-pro` — required for medical accuracy
+3. **SEO:** Call `subagents/seo-optimizer.md` with the draft to generate local SEO metadata. **MUST: Include Colorado/Denver keywords in title, description, and focus keywords.** Save to run folder. **Model:** `minimax/MiniMax-M2.7`
+4. **Image:** Call `subagents/image-generator.md` with the topic and SEO title to generate the featured image using `google/gemini-3.1-flash-image-preview` (alias: `nano-banana`). Save image to run folder. **Model:** `google/gemini-3.1-flash-image-preview` — do NOT use `gemini-3.1-pro-image-preview-v2` or any other image model variant.
+5. **Editor:** Call `subagents/editor.md` to assemble the post, ensuring an 8th-grade reading level and "pretty" formatting. Tone: friendly, scientific, with occasional humor. Save to run folder. **Model:** `minimax/MiniMax-M2.7`
+6. **Media Upload:** Call `subagents/wp-media-uploader.md` to upload the generated image to WordPress. **MUST: Pass descriptive alt_text generated from topic and SEO title.** Example: for "Orforglipron: The Oral GLP-1 Revolution" → alt_text="A capsule medication beside a glass of water, representing an oral weight-loss treatment option". **Model:** `minimax/MiniMax-M2.7`
+7. **Article Upload:** Call `subagents/wp-article-uploader.md` to create a draft post on WordPress, scheduled for +7 days, with the featured image and SEO metadata. **Model:** `minimax/MiniMax-M2.7`
+8. **Notify:** Call `subagents/notifier.md` to email the final copy and WordPress link to Dr. Lazarus for review. **Model:** `minimax/MiniMax-M2.7`
+9. **Log:** UPDATE `master-log.json` with the new post (date, topic, title, WP link, primary keyword, Colorado keyword). This step is mandatory — do not skip.
+
+## Trigger Instructions
+When calling this orchestrator, provide:
+- `topic`: The subject of the blog post.
+- `link` (optional): A URL to summarize or use as a source.
+
+## Subagents Folder
+`projects/blog-post/subagents/`

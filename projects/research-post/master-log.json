@@ -1,0 +1,75 @@
+{
+  "description": "Master log of all Research Posts. Check this before selecting a new topic — no duplicates within 30 days.",
+  "posts": [
+    {
+      "date": "2026-04-06",
+      "topic": "Protein and Muscle Preservation During GLP-1 Therapy",
+      "title": "Preserving Muscle on GLP-1 Medications: What the Research Tells Us",
+      "category": "Nutritional",
+      "primary_keyword": "GLP-1 muscle preservation",
+      "colorado_keyword": "Denver",
+      "wp_link": "https://www.clinicalnutritioncenter.com/research_update/preserving-muscle-glp1",
+      "notes": "First post in Nutritional category"
+    },
+    {
+      "date": "2026-04-07",
+      "topic": "GLP-1 Behavioral Transitions",
+      "title": "Behavioral Changes When Starting GLP-1 Medications",
+      "category": "Behavioral",
+      "primary_keyword": "GLP-1 behavioral changes",
+      "colorado_keyword": "Colorado",
+      "wp_link": "",
+      "notes": "Behavioral category"
+    },
+    {
+      "date": "2026-04-08",
+      "topic": "GLP-1 Cardiovascular Benefits",
+      "title": "Cardiovascular Benefits of GLP-1 Receptor Agonists",
+      "category": "Medical",
+      "primary_keyword": "GLP-1 cardiovascular benefits",
+      "colorado_keyword": "Denver",
+      "wp_link": "",
+      "notes": "Medical category"
+    },
+    {
+      "date": "2026-04-09",
+      "topic": "Navigating GLP-1 Medication Transitions: Orforglipron to Semaglutide (Wegovy HD)",
+      "title": "Navigating GLP-1 Medication Transitions: When and How to Switch from Oral Orforglipron to Injectable Semaglutide (Wegovy HD)",
+      "category": "Behavioral",
+      "primary_keyword": "GLP-1 medication switch",
+      "colorado_keyword": "Colorado",
+      "wp_link": "",
+      "notes": "Dr. Lazarus at OMA conference San Diego. Last entry in topic_log.json"
+    },
+    {
+      "date": "2026-04-10",
+      "topic": "Foundayo CPT Coverage",
+      "title": "",
+      "category": "Medical",
+      "primary_keyword": "orforglipron CPT",
+      "colorado_keyword": "",
+      "wp_link": "",
+      "notes": "Partial run - foundayo CPT payload generated"
+    },
+    {
+      "date": "2026-04-13",
+      "topic": "",
+      "title": "",
+      "category": "Medical",
+      "primary_keyword": "",
+      "colorado_keyword": "",
+      "wp_link": "",
+      "notes": "Run folder exists but no content recorded"
+    },
+    {
+      "date": "2026-04-14",
+      "topic": "",
+      "title": "",
+      "category": "Medical",
+      "primary_keyword": "",
+      "colorado_keyword": "",
+      "wp_link": "",
+      "notes": "Run folder exists"
+    }
+  ]
+}

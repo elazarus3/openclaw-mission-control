@@ -1,0 +1,32 @@
+{
+  "description": "Master log of all Blog Posts. Check this before selecting a new topic — no duplicates within 60 days.",
+  "posts": [
+    {
+      "date": "2026-04-03",
+      "topic": "High Altitude Weight Loss in Denver",
+      "title": "The Altitude Advantage: Why Losing Weight in Denver is Scientifically Different",
+      "primary_keyword": "high altitude weight loss Denver",
+      "colorado_keyword": "Denver",
+      "wp_link": "",
+      "notes": "WP upload failed (auth error). Content ready. Scheduled for 2026-04-10."
+    },
+    {
+      "date": "2026-04-13",
+      "topic": "GLP-1 Surgery Safety",
+      "title": "GLP-1 Medications and Surgery: What Patients Need to Know",
+      "primary_keyword": "GLP-1 surgery safety",
+      "colorado_keyword": "Greenwood Village",
+      "wp_link": "",
+      "notes": "Run completed but WP upload may have failed. Check posts/2026-04-13/"
+    },
+    {
+      "date": "2026-04-13",
+      "topic": "Orforglipron Oral GLP-1",
+      "title": "Orforglipron: The Oral GLP-1 Revolution",
+      "primary_keyword": "orforglipron Denver",
+      "colorado_keyword": "Denver",
+      "wp_link": "",
+      "notes": "Multiple files generated. Check posts/ folder."
+    }
+  ]
+}
