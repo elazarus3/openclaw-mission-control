@@ -13,9 +13,9 @@ Create this subfolder at the start of the workflow using today's date. Do NOT sa
 ## Model Routing Strategy
 See `projects/config.md` for the authoritative model list. Summary:
 - **Orchestrator:** `minimax/MiniMax-M2.7`
-- **All Subagents:** `minimax/MiniMax-M2.7` — ALL steps except image generation and medical writing
-- **Image Generation:** `google/gemini-3.1-flash-image-preview` (nano-banana) — image_generate tool only, not a subagent model
-- **Fallback:** `minimax/MiniMax-M2.7`
+- **Writer:** `anthropic/claude-sonnet-4-6` — required for clinical accuracy and content quality
+- **All other subagents:** `minimax/MiniMax-M2.7`
+- **Image:** `google/gemini-3.1-flash-image-preview` (nano-banana) — image_generate tool only
 
 ## CRITICAL EXECUTION RULE
 You MUST execute ALL 6 steps in sequence without stopping. If a step fails, log the error and continue to the next step. Do not abort the entire workflow for a single step failure unless explicitly instructed.
@@ -38,7 +38,7 @@ You MUST execute ALL 6 steps in sequence without stopping. If a step fails, log 
    - **MUST**: Draft under 500 words (target 380-480). No exceptions.
    - **MUST**: Include Colorado/Denver local tie-in.
    - **MUST**: Tone: friendly, scientific, with occasional humor.
-   - **Model:** `google/gemini-3.1-pro` — required for medical accuracy
+   - **Model:** `anthropic/claude-sonnet-4-6`
    - **Output:** Save `draft.md` and `seo.json` to the run folder.
 
 3. **FAQ Schema:** Call `subagents/faq-schema.md` to generate FAQ schema from the draft.

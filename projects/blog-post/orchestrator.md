@@ -13,9 +13,9 @@ Create this subfolder at the start of the workflow using today's date. Do NOT sa
 ## Model Routing Strategy
 See `projects/config.md` for the authoritative model list. Summary:
 - **Orchestrator:** `minimax/MiniMax-M2.7`
-- **All Subagents:** `minimax/MiniMax-M2.7` — ALL steps except image generation
+- **Writer:** `anthropic/claude-sonnet-4-6` — required for content quality and accuracy
+- **All other subagents:** `minimax/MiniMax-M2.7`
 - **Image:** `google/gemini-3.1-flash-image-preview` (nano-banana) — do NOT use any other image model variant
-- **Fallback:** `minimax/MiniMax-M2.7`
 
 ## CRITICAL EXECUTION RULE
 You MUST execute ALL 9 steps in sequence without stopping or asking for permission. Do not stop after writing or SEO — complete the image, upload, notification, and logging steps even if earlier steps return partial results. If a subagent fails, log the error and continue to the next step.
@@ -33,7 +33,7 @@ You MUST execute ALL 9 steps in sequence without stopping or asking for permissi
 ## Workflow Sequence
 1. **Create Run Folder:** Create `projects/blog-post/posts/YYYY-MM-DD/` using today's date before any other step.
 2. **Topic Generator (conditional):** If no topic was provided, call `subagents/topic-generator.md` to generate 3 ranked topic recommendations from the keyword map. Auto-select rank 1. If topic WAS provided, skip this step and use the provided topic.
-3. **Writer:** Call `subagents/writer.md` with the topic and any provided link to draft the post. Save to run folder. **MUST: Under 500 words (target: 380-480).** **Model:** `google/gemini-3.1-pro` — required for medical accuracy
+3. **Writer:** Call `subagents/writer.md` with the topic and any provided link to draft the post. Save to run folder. **MUST: Under 500 words (target: 380-480).** **Model:** `anthropic/claude-sonnet-4-6`
 4. **SEO:** Call `subagents/seo-optimizer.md` with the draft to generate local SEO metadata. **MUST: Include Colorado/Denver keywords in title, description, and focus keywords.** Save to run folder. **Model:** `minimax/MiniMax-M2.7`
 5. **Image:** Call `subagents/image-generator.md` with the topic and SEO title to generate the featured image using `google/gemini-3.1-flash-image-preview` (alias: `nano-banana`). Save image to run folder. **Model:** `google/gemini-3.1-flash-image-preview` — do NOT use `gemini-3.1-pro-image-preview-v2` or any other image model variant.
 6. **Editor:** Call `subagents/editor.md` to assemble the post, ensuring an 8th-grade reading level and "pretty" formatting. Tone: friendly, scientific, with occasional humor. Save to run folder. **Model:** `minimax/MiniMax-M2.7`
