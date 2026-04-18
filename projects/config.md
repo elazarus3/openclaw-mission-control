@@ -7,15 +7,16 @@ All orchestrators and subagents MUST reference this file for models, credentials
 
 ## Model Routing
 
-| Role | Model | Why |
+| Role | Model | When to Use |
 |---|---|---|
-| **Orchestrator** | `minimax/MiniMax-M2.7` | Routing/spawning decisions — no heavy writing needed |
-| **Writer subagent (all content)** | `anthropic/claude-sonnet-4-6` | Better reasoning, fewer hallucinations, follows complex instructions reliably |
-| **Image Generation** | `google/gemini-3.1-flash-image-preview` (alias: `nano-banana`) | Purpose-built for image gen |
-| **All other subagents** (SEO, uploads, scheduling, research, coding) | `minimax/MiniMax-M2.7` | Cost-effective for task execution |
-| **Fallback (rate limit)** | `minimax/MiniMax-M2.7` | |
+| **Orchestrator** | `minimax/MiniMax-M2.7` | Default — all orchestrators |
+| **Writer subagent (all content)** | `minimax/MiniMax-M2.7` | Default — all content writing |
+| **Image Generation** | `google/gemini-3.1-flash-image-preview` (alias: `nano-banana`) | Always |
+| **Sonnet (on request only)** | `anthropic/claude-sonnet-4-6` | Only when Dr. Lazarus specifically requests it |
 
 **Rules:**
+- All writing, SEO, uploads, scheduling: `minimax/MiniMax-M2.7` by default.
+- Sonnet: only when Dr. Lazarus explicitly asks for it.
 - If a model returns a 429, wait 5s, retry once, then retry on the same model or log failure.
 - Never use local Ollama models.
 

@@ -47,5 +47,5 @@ You MUST execute the ENTIRE workflow (all 6 steps) within your session. Do NOT s
 
 ## Model Routing
 - **Orchestrator:** `minimax/MiniMax-M2.7`
-- **Assembler + Polish:** `anthropic/claude-sonnet-4-6` — these write the newsletter content
+- **Assembler + Polish:** `minimax/MiniMax-M2.7` (default — Sonnet on request only)
 - **All other subagents (fetch, summarize, schedule, notify):** `minimax/MiniMax-M2.7`

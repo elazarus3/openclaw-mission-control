@@ -13,7 +13,7 @@ Create this subfolder at the start of the workflow using today's date. Do NOT sa
 ## Model Routing Strategy
 See `projects/config.md` for the authoritative model list. Summary:
 - **Orchestrator:** `minimax/MiniMax-M2.7`
-- **Writer:** `anthropic/claude-sonnet-4-6` — required for clinical accuracy and content quality
+- **Writer:** `minimax/MiniMax-M2.7` (default — Sonnet on request only)
 - **All other subagents:** `minimax/MiniMax-M2.7`
 - **Image:** `google/gemini-3.1-flash-image-preview` (nano-banana) — image_generate tool only
 
@@ -38,7 +38,7 @@ You MUST execute ALL 6 steps in sequence without stopping. If a step fails, log 
    - **MUST**: Draft under 500 words (target 380-480). No exceptions.
    - **MUST**: Include Colorado/Denver local tie-in.
    - **MUST**: Tone: friendly, scientific, with occasional humor.
-   - **Model:** `anthropic/claude-sonnet-4-6`
+   - **Model:** `minimax/MiniMax-M2.7`
    - **Output:** Save `draft.md` and `seo.json` to the run folder.
 
 3. **FAQ Schema:** Call `subagents/faq-schema.md` to generate FAQ schema from the draft.
