@@ -15,7 +15,16 @@ from pathlib import Path
 from google import genai
 from google.genai import types
 
-GEMINI_API_KEY = "AIzaSyAJbQzAgftEPtxVHRKb0Ok9GFYJ4iy6aPs"
+import os
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+if not GEMINI_API_KEY:
+    # Fallback: load from api_keys.env
+    env_file = "/home/ethan/.openclaw/api_keys.env"
+    if os.path.exists(env_file):
+        for line in open(env_file):
+            if line.startswith("export GOOGLE_API_KEY="):
+                GEMINI_API_KEY = line.split("=")[1].strip().strip('"')
+                break
 OUTPUT_PATH = "projects/blog-post/posts/YYYY-MM-DD/image.jpg"
 PROMPT = "YOUR PHOTOREALISTIC PROMPT HERE"
 
