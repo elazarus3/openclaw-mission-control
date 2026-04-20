@@ -37,11 +37,19 @@ def api_post(pid, data):
     return r.json() if r.ok else None
 
 def strip_all_links(html_text):
-    """Remove ALL <a> tags, keeping inner text."""
-    result = re.sub(r'<a\b[^>]*>([^<]*)</a>', r'\1', html_text, flags=re.IGNORECASE | re.DOTALL)
-    result = re.sub(r'<a\b[^>]*/?>', '', result)
-    result = re.sub(r'</a>', '', result)
-    return result
+    """Remove ALL <a> tags from HTML, keeping inner text. Skip JSON-LD script blocks."""
+    parts = re.split(r'(<script[^>]*type="application/ld\+json"[^>]*>.*?</script>)',
+                     html_text, flags=re.IGNORECASE | re.DOTALL)
+    result_parts = []
+    for i, part in enumerate(parts):
+        if re.match(r'<script[^>]*type="application/ld\+json"[^>]*>', part, re.IGNORECASE):
+            result_parts.append(part)  # keep JSON-LD untouched
+        else:
+            part = re.sub(r'<a\b[^>]*>([^<]*)</a>', r'\1', part, flags=re.IGNORECASE | re.DOTALL)
+            part = re.sub(r'<a\b[^>]*/?>', '', part)
+            part = re.sub(r'</a>', '', part)
+            result_parts.append(part)
+    return ''.join(result_parts)
 
 def sync_plain(html_text):
     """
@@ -56,6 +64,11 @@ def sync_plain(html_text):
     while hp < html_len:
         c = html_text[hp]
         if c == '<':
+            match = re.match(r'<script[^>]*type="application/ld\+json"[^>]*>.*?</script>',
+                             html_text[hp:], re.IGNORECASE | re.DOTALL)
+            if match:
+                hp += len(match.group(0))
+                continue
             while hp < html_len and html_text[hp] != '>':
                 hp += 1
             hp += 1

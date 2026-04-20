@@ -59,19 +59,56 @@ def get_link_regions(html_text):
     return regions
 
 def strip_all_links(html_text):
-    """Remove ALL <a> tags, keeping inner text. Use this before re-injecting to prevent nested links."""
-    result = re.sub(r'<a\b[^>]*>([^<]*)</a>', r'\1', html_text, flags=re.IGNORECASE | re.DOTALL)
-    result = re.sub(r'<a\b[^>]*/?>', '', result)
-    result = re.sub(r'</a>', '', result)
-    return result
+    """Remove ALL <a> tags, keeping inner text. Use this before re-injecting to prevent nested links.
+    For JSON-LD script blocks: extract JSON, strip ALL HTML tags from string values,
+    put clean JSON back. This fixes JSON that was corrupted by broken link injection."""
+    def strip_json_of_anchor_tags(json_str):
+        """Remove <a> tags from a JSON string, keeping inner text.
+        Also removes URL slug fragments left behind by broken link injection
+        (e.g. 'glp-1-weight-loss-medications">')."""
+        # Replace <a href="URL">TEXT</a> with just TEXT
+        cleaned = re.sub(r'<a\b[^>]*>([^<]*)</a>', r'\1', json_str, flags=re.IGNORECASE | re.DOTALL)
+        # Remove any leftover <a ...> or </a>
+        cleaned = re.sub(r'<a\b[^>]*/?>', '', cleaned)
+        cleaned = re.sub(r'</a>', '', cleaned)
+        # Remove URL slug fragments left behind by broken nested link injection
+        # Pattern: dash-separated slug followed by "> (from corrupted link text)
+        cleaned = re.sub(
+            r'[a-z0-9]+(?:-[a-z0-9]+)*">',
+            '"',
+            cleaned,
+            flags=re.IGNORECASE
+        )
+        return cleaned
+
+    def process_jsonld_block(block):
+        """Extract JSON content from script block, strip HTML tags from string values, return clean block."""
+        # Find the JSON part (between > after <script...> and </script>)
+        m = re.match(r'(<script[^>]*>)(.*?)(</script>)', block, re.IGNORECASE | re.DOTALL)
+        if not m:
+            return block
+        open_tag, json_content, close_tag = m.group(1), m.group(2), m.group(3)
+        cleaned_json = strip_json_of_anchor_tags(json_content)
+        return open_tag + cleaned_json + close_tag
+
+    # Split on JSON-LD script blocks
+    parts = re.split(r'(<script[^>]*type="application/ld\+json"[^>]*>.*?</script>)',
+                     html_text, flags=re.IGNORECASE | re.DOTALL)
+    result_parts = []
+    for part in parts:
+        if re.match(r'<script[^>]*type="application/ld\+json"[^>]*>', part, re.IGNORECASE):
+            result_parts.append(process_jsonld_block(part))
+        else:
+            part = re.sub(r'<a\b[^>]*>([^<]*)</a>', r'\1', part, flags=re.IGNORECASE | re.DOTALL)
+            part = re.sub(r'<a\b[^>]*/?>', '', part)
+            part = re.sub(r'</a>', '', part)
+            result_parts.append(part)
+    return ''.join(result_parts)
 
 def build_char_map(html_text):
     """
-    Walk html_text directly (NOT a pre-unescaped copy) and build:
-    - plain text
-    - char_map: plain_pos -> html_pos
-    This avoids the offset-mismatch bug where char_map positions don't match
-    the original HTML when entities are present.
+    Walk html_text directly, skipping <script type="application/ld+json"> blocks
+    so JSON content is never included in the plain-text search or position map.
     """
     plain_chars = []
     char_map = []
@@ -81,6 +118,13 @@ def build_char_map(html_text):
     while hp < html_len:
         c = html_text[hp]
         if c == '<':
+            # Check if this is a JSON-LD script tag — skip the whole block
+            match = re.match(r'<script[^>]*type="application/ld\+json"[^>]*>.*?</script>',
+                             html_text[hp:], re.IGNORECASE | re.DOTALL)
+            if match:
+                hp += len(match.group(0))
+                continue
+            # Skip regular tag
             while hp < html_len and html_text[hp] != '>':
                 hp += 1
             hp += 1
@@ -103,6 +147,25 @@ def build_char_map(html_text):
     return char_map, ''.join(plain_chars)
 
 def inject_links(html_text, keyword_url_map):
+    """
+    Inject links into html_text. Skips <script type="application/ld+json"> blocks entirely
+    so JSON-LD FAQ schema is never corrupted by link injection.
+    """
+    # Step 1: Extract JSON-LD script blocks so they're never touched
+    jsonld_blocks = []
+    def extract_jsonld(m):
+        jsonld_blocks.append(m.group(0))
+        return f'__JSONLD_{len(jsonld_blocks)-1}__'
+
+    protected = re.sub(
+        r'<script[^>]*type="application/ld\+json"[^>]*>.*?</script>',
+        extract_jsonld,
+        html_text,
+        flags=re.IGNORECASE | re.DOTALL
+    )
+
+    # Step 2: Inject links into the protected HTML
+    result = protected
     """
     Inject <a href> links around keyword occurrences in HTML.
     Skips keywords already inside existing <a> tags.
@@ -159,6 +222,10 @@ def inject_links(html_text, keyword_url_map):
             last_pos = adj_s
             injected.append(keyword)
             link_regions.append((adj_s, adj_s + len(tag)))
+
+    # Step 3: Restore JSON-LD blocks
+    for i, block in enumerate(jsonld_blocks):
+        result = result.replace(f'__JSONLD_{i}__', block)
 
     return result, injected
 
