@@ -8,6 +8,25 @@ import requests, base64, re, html, time
 from requests.auth import HTTPBasicAuth
 
 USER_PASS = 'drlazarus:1ggq 5syX 9ztB YhUs P2FH aEEh'
+import os, json
+from datetime import datetime
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
+os.makedirs(BACKUP_DIR, exist_ok=True)
+
+def cleanup_old_backups(days=6):
+    cutoff = time.time() - (days * 86400)
+    for fn in os.listdir(BACKUP_DIR):
+        fp = os.path.join(BACKUP_DIR, fn)
+        if os.path.isfile(fp) and os.path.getmtime(fp) < cutoff:
+            os.remove(fp)
+
+def backup_post(pid, content):
+    date_str = datetime.now().strftime('%Y%m%d')
+    path = os.path.join(BACKUP_DIR, f'{pid}_{date_str}.json')
+    with open(path, 'w') as f:
+        json.dump({'post_id': pid, 'date': date_str, 'content': content}, f)
+
+cleanup_old_backups()
 b64 = base64.b64encode(USER_PASS.encode()).decode()
 s = requests.Session()
 s.headers.update({'Authorization': f"Basic {b64}", 'User-Agent': 'curl/7.88.1'})
@@ -169,6 +188,9 @@ fixed = errors = clean = 0
 for p in all_posts:
     pid = p["id"]
     content = p.get("content", {}).get("rendered", "")
+
+    # Backup original before fixing
+    backup_post(pid, content)
 
     bad = re.findall(r'href="[^"]*<a [^"]*"', content)
     nested = re.findall(r'<a\b[^>]*><a\b[^>]*>', content)

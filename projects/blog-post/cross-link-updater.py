@@ -19,6 +19,25 @@ AGENTMAIL_API_KEY = os.getenv(
     "AGENTMAIL_API_KEY",
     "am_us_f4966bf52dd46dda0021cc0bb8d91f6ec8971b725709f04b088104514035bc3e"
 )
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backups")
+os.makedirs(BACKUP_DIR, exist_ok=True)
+
+def cleanup_old_backups(days=6):
+    """Delete backups older than `days` days."""
+    cutoff = time.time() - (days * 86400)
+    for fn in os.listdir(BACKUP_DIR):
+        fp = os.path.join(BACKUP_DIR, fn)
+        if os.path.isfile(fp) and os.path.getmtime(fp) < cutoff:
+            os.remove(fp)
+
+def backup_post(pid, content):
+    """Save a backup of the post's original content before modifying."""
+    date_str = datetime.now().strftime("%Y%m%d")
+    path = os.path.join(BACKUP_DIR, f"{pid}_{date_str}.json")
+    with open(path, "w") as f:
+        json.dump({"post_id": pid, "date": date_str, "content": content}, f)
+
+cleanup_old_backups()
 REPORT_TO = "ethanlazarus@gmail.com"
 REPORT_FROM = "info@clinicalnutritioncenter.com"
 
@@ -218,6 +237,8 @@ for p in all_posts:
     title = re.sub(r'<[^>]+>', '', p.get("title", {}).get("rendered", ""))
     content_html = p.get("content", {}).get("rendered", "")
     # Strip all existing links first — prevents nested/duplicate link corruption
+    # Backup original before touching
+    backup_post(pid, content_html)
     clean_base = strip_all_links(content_html)
     links_added = []
 
