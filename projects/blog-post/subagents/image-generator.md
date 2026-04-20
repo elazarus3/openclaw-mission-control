@@ -57,6 +57,7 @@ for part in response.candidates[0].content.parts:
 
 **What NEVER to write:**
 - ❌ "digital illustration," "3D render," "isometric," "clean graphic"
+- ❌ **Any text, words, letters, numbers, labels, or signage visible in the image** — zero text, always
 - ❌ "modern flat design," "minimalist icon," "stylized"
 - ❌ Anything that makes it look like AI clip art
 - ❌ Overly perfect skin, impossible lighting, surreal elements
