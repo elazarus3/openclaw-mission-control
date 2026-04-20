@@ -39,48 +39,51 @@ def get_link_regions(html_text):
         regions.append((m.start(), m.end()))
     return regions
 
+def strip_all_links(html_text):
+    """Remove ALL <a> tags, keeping inner text. Use this before re-injecting to prevent nested links."""
+    result = re.sub(r'<a\b[^>]*>([^<]*)</a>', r'\1', html_text, flags=re.IGNORECASE | re.DOTALL)
+    result = re.sub(r'<a\b[^>]*/?>', '', result)
+    result = re.sub(r'</a>', '', result)
+    return result
+
 def build_char_map(html_text):
     """
-    Build a mapping from plain-text positions to HTML character positions.
-    Returns list of (plain_pos, html_pos) for each character in plain text.
-    Also returns the plain text itself.
+    Walk html_text directly (NOT a pre-unescaped copy) and build:
+    - plain text
+    - char_map: plain_pos -> html_pos
+    This avoids the offset-mismatch bug where char_map positions don't match
+    the original HTML when entities are present.
     """
-    html_unescaped = html.unescape(html_text)
-    plain = re.sub(r'<[^>]+>', '', html_unescaped)
-    plain = re.sub(r'\s+', ' ', plain).strip()
-
+    plain_chars = []
     char_map = []
     hp = 0
-    pp = 0
-    html_len = len(html_unescaped)
-    plain_len = len(plain)
+    html_len = len(html_text)
 
-    while hp < html_len and pp < plain_len:
-        c = html_unescaped[hp]
+    while hp < html_len:
+        c = html_text[hp]
         if c == '<':
-            while hp < html_len and html_unescaped[hp] != '>':
+            while hp < html_len and html_text[hp] != '>':
                 hp += 1
             hp += 1
         elif c == '&':
-            end = hp
-            while (end < html_len and html_unescaped[end] not in ' \n\t<>;' and end - hp < 15):
+            end = hp + 1
+            while end < html_len and html_text[end] not in ' \n\t<>;' and end - hp < 15:
                 end += 1
-            if end < html_len and html_unescaped[end] == ';':
+            if end < html_len and html_text[end] == ';':
                 end += 1
-            entity = html.unescape(html_unescaped[hp:end])
-            for ch in entity:
-                if pp < plain_len:
-                    char_map.append((pp, hp))
-                    pp += 1
+            entity_decoded = html.unescape(html_text[hp:end])
+            for ch in entity_decoded:
+                char_map.append((len(plain_chars), hp))
+                plain_chars.append(ch)
             hp = end
         else:
-            char_map.append((pp, hp))
-            pp += 1
+            char_map.append((len(plain_chars), hp))
+            plain_chars.append(c)
             hp += 1
 
-    return char_map, plain
+    return char_map, ''.join(plain_chars)
 
-def inject_links(html_text, keyword, target_url, max_injections=1):
+def inject_links(html_text, keyword_url_map):
     """
     Inject <a href> links around keyword occurrences in HTML.
     Skips keywords already inside existing <a> tags.
@@ -98,39 +101,45 @@ def inject_links(html_text, keyword, target_url, max_injections=1):
                 return True
         return False
 
-    pattern = re.compile(rf'\b({re.escape(keyword)})\b', re.IGNORECASE)
-    html_positions = []
-
-    for m in pattern.finditer(plain):
-        ps, pe = m.start(), m.end()
-        hs = he = None
-        for (pp, ph) in char_map:
-            if pp == ps and hs is None:
-                hs = ph
-            if pe > 0 and pp == pe - 1:
-                he = ph + 1
-        if hs is not None and he is not None:
-            if not inside_link(hs) and not inside_link(he - 1):
-                html_positions.append((hs, he, m.group(0)))
-
-    # Sort descending so replacements don't shift offsets
-    html_positions.sort(key=lambda x: -x[0])
-
     result = html_text
+    shifts = 0
+    last_pos = len(result) + 1000000
     injected = []
-    for hs, he, word in html_positions[:max_injections]:
-        # Final safety check on the surrounding HTML context
-        ctx_start = max(0, hs - 5)
-        ctx_end = min(len(result), he + 5)
-        context = result[ctx_start:ctx_end]
-        if 'href=' in context or '</a>' in context[:10]:
-            continue
-        tag = f'<a href="{target_url}">{word}</a>'
-        result = result[:hs] + tag + result[he:]
-        injected.append(word)
-        # After replacing, rebuild link regions (offsets shifted)
-        # Since we go in descending order, existing regions are still valid
-        # but new region at hs will affect positions < hs — but we don't touch those
+
+    # Process longest keywords first to avoid partial replacements
+    for keyword, target_url in sorted(keyword_url_map.items(), key=lambda x: -len(x[0])):
+        pattern = re.compile(rf'\b({re.escape(keyword)})\b', re.IGNORECASE)
+
+        for m in pattern.finditer(plain):
+            ps, pe = m.start(), m.end()
+            hs = he = None
+            for (pp, ph) in char_map:
+                if pp == ps and hs is None:
+                    hs = ph
+                if pe > 0 and pp == pe - 1:
+                    he = ph + 1
+            if hs is None or he is None:
+                continue
+
+            adj_s = hs + shifts
+            adj_e = he + shifts
+
+            if adj_s >= last_pos:
+                continue
+            if inside_link(adj_s) or inside_link(adj_e - 1):
+                continue
+
+            ctx_start = max(0, adj_s - 20)
+            snippet = result[ctx_start:adj_e + 5]
+            if 'href=' in snippet[:adj_s - ctx_start + 5]:
+                continue
+
+            tag = f'<a href="{target_url}">{keyword}</a>'
+            result = result[:adj_s] + tag + result[adj_e:]
+            shifts += len(tag) - (adj_e - adj_s)
+            last_pos = adj_s
+            injected.append(keyword)
+            link_regions.append((adj_s, adj_s + len(tag)))
 
     return result, injected
 
@@ -208,24 +217,23 @@ for p in all_posts:
     pid = p["id"]
     title = re.sub(r'<[^>]+>', '', p.get("title", {}).get("rendered", ""))
     content_html = p.get("content", {}).get("rendered", "")
-    new_html = content_html
+    # Strip all existing links first — prevents nested/duplicate link corruption
+    clean_base = strip_all_links(content_html)
     links_added = []
 
+    # Build keyword -> url map for this post (skip self-links)
+    kw_map = {}
     for keyword, targets in sorted(LINK_TARGETS.items(), key=lambda x: -len(x[0])):
         if not targets:
             continue
-        # Pick target that's not the current post
-        target = None
-        for t in targets:
-            if t["id"] != pid:
-                target = t
-                break
-        if not target:
-            continue
+        target = next((t for t in targets if t["id"] != pid), None)
+        if target:
+            kw_map[keyword] = target["url"]
 
-        new_html, words = inject_links(new_html, keyword, target["url"], max_injections=1)
-        if words:
-            links_added.append(f"  + '{words[0]}' → {target['title'][:40]}")
+    new_html, injected = inject_links(clean_base, kw_map)
+    for kw, url in [(k, v) for k, v in kw_map.items() if k in injected]:
+        target_title = next((t["title"][:40] for t in LINK_TARGETS.get(kw, []) if t["url"] == url), kw)
+        links_added.append(f"  + '{kw}' → {target_title}")
 
     if links_added:
         result = api_post(f"{WORDPRESS}/wp-json/wp/v2/posts/{pid}", {"content": new_html})
