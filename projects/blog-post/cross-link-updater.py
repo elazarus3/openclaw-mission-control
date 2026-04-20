@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """Batch cross-link injector for CNC blog posts. Uses requests library."""
-import json, re, time, base64
+import json, re, time, base64, sys, os
 import requests
 from requests.auth import HTTPBasicAuth
+from agentmail import AgentMail
+from datetime import datetime
+
+AGENTMAIL_API_KEY = os.getenv("AGENTMAIL_API_KEY", "am_us_f4966bf52dd46dda0021cc0bb8d91f6ec8971b725709f04b088104514035bc3e")
+REPORT_TO = "ethanlazarus@gmail.com"
+REPORT_FROM = "info@clinicalnutritioncenter.com"
 
 WORDPRESS = "https://www.clinicalnutritioncenter.com"
 USER_PASS = "drlazarus:1ggq 5syX 9ztB YhUs P2FH aEEh"
@@ -143,6 +149,7 @@ for p in all_posts:
             for l in links_added[:5]:
                 print(l)
             updated += 1
+            updated_ids.append(pid)
         else:
             print(f"\n✗ [{pid}] FAILED")
             errors += 1
@@ -151,3 +158,116 @@ for p in all_posts:
         skipped += 1
 
 print(f"\n=== DONE ===\n  Updated: {updated}\n  Skipped (no links): {skipped}\n  Errors: {errors}")
+
+# ── Email Report ───────────────────────────────────────────────────────────────
+def send_report(all_posts, updated_ids, skipped, errors):
+    """Send pretty HTML report via AgentMail."""
+    if not AGENTMAIL_API_KEY:
+        print("[EMAIL] No API key, skipping report")
+        return
+
+    updated_posts = [p for p in all_posts if p["id"] in updated_ids]
+    run_date = datetime.now().strftime("%B %d, %Y at %I:%M %p MST")
+
+    # Build post rows
+    rows = ""
+    for p in updated_posts:
+        title = re.sub(r'<[^>]+>', '', p.get("title", {}).get("rendered", ""))
+        url = p.get("link", "")
+        pid = p.get("id")
+        date = p.get("date", "")[:10]
+        rows += f"""<tr>
+            <td style="padding:10px 14px;border-bottom:1px solid #e8e8e8;font-size:13px;">{date}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e8e8e8;"><a href="{url}" style="color:#1a5276;text-decoration:none;font-weight:500;">{title}</a></td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e8e8e8;color:#555;font-size:12px;">#{pid}</td>
+        </tr>"""
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cross-Link Report</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:700px;margin:40px auto;">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1a5276,#1e8449);padding:32px 36px;border-radius:12px 12px 0 0;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:48px;height:48px;background:rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;">🔗</div>
+        <div>
+          <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">Cross-Link Update Complete</h1>
+          <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">{run_date}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="background:#fff;padding:24px 36px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+      <div style="display:flex;gap:16px;">
+        <div style="flex:1;background:#f0faf4;border-radius:10px;padding:18px 20px;text-align:center;border:1px solid #c8e6c9;">
+          <div style="font-size:32px;font-weight:800;color:#1e8449;">{updated}</div>
+          <div style="font-size:12px;color:#555;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">Posts Updated</div>
+        </div>
+        <div style="flex:1;background:#fefaf5;border-radius:10px;padding:18px 20px;text-align:center;border:1px solid #ffe0b2;">
+          <div style="font-size:32px;font-weight:800;color:#e67e22;">{skipped}</div>
+          <div style="font-size:12px;color:#555;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">Skipped</div>
+        </div>
+        <div style="flex:1;background:#fef5f5;border-radius:10px;padding:18px 20px;text-align:center;border:1px solid #ffcdd2;">
+          <div style="font-size:32px;font-weight:800;color:#c0392b;">{errors}</div>
+          <div style="font-size:12px;color:#555;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">Errors</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Post Table -->
+    <div style="background:#fff;padding:0 36px 24px;border-left:1px solid #e0e0e0;border-right:1px solid #e0e0e0;">
+      <h3 style="margin:0 0 16px;padding-top:20px;font-size:15px;color:#333;border-bottom:2px solid #1a5276;padding-bottom:10px;">
+        Updated Posts — Clinical Nutrition Center
+      </h3>
+      <table style="width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        <thead>
+          <tr style="background:#1a5276;">
+            <th style="padding:10px 14px;text-align:left;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Date</th>
+            <th style="padding:10px 14px;text-align:left;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Post</th>
+            <th style="padding:10px 14px;text-align:left;color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">WP ID</th>
+          </tr>
+        </thead>
+        <tbody>{rows}</tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#f8f9fa;padding:20px 36px;border-radius:0 0 12px 12px;border:1px solid #e0e0e0;border-top:none;">
+      <p style="margin:0;font-size:12px;color:#888;text-align:center;">
+        Clinical Nutrition Center · Greenwood Village, CO · Automated Content Engine
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>"""
+
+    try:
+        client = AgentMail(api_key=AGENTMAIL_API_KEY)
+        result = client.inboxes.messages.send(
+            inbox_id="ethanlazarus@agentmail.to",
+            to=REPORT_TO,
+            subject=f"🔗 Cross-Link Report: {updated} posts updated — {datetime.now().strftime('%b %d, %Y')}",
+            html=html
+        )
+        print(f"[EMAIL] Report sent: {result.message_id}")
+    except Exception as e:
+        print(f"[EMAIL] Failed to send report: {e}")
+
+# ── Track updated post IDs for the report ─────────────────────────────────────
+updated_ids = []  # track updated post IDs for the email report
+
+print(f"\n=== DONE ===\n  Updated: {updated}\n  Skipped (no links): {skipped}\n  Errors: {errors}\n")
+
+# Send report
+try:
+    send_report(all_posts, updated_ids, skipped, errors)
+except Exception as e:
+    print(f"[EMAIL] Report error: {e}")
