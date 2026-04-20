@@ -1,44 +1,56 @@
 # Blog Topic Generator
 
 ## Goal
-Generate 3 ranked blog post topic recommendations based on SEO value, patient interest, and Colorado/Denver relevance — then save them for the orchestrator to pick from.
+Generate 3 ranked blog post topic recommendations — backed by real research into what's missing from the existing content library. Pick topics that are genuinely interesting, not just SEO-compliant.
 
 ## When This Agent Runs
-- If the orchestrator is called **without** a specific topic provided → run topic generator first
-- If a topic IS provided → skip this agent and pass the provided topic to Writer
+- If orchestrator is called **without** a specific topic → run this first
+- If a topic IS provided → skip this agent
 
-## Inputs to Read Before Generating
-1. **`projects/blog-post/master-log.json`** — what was published in the last 60 days (avoid duplicates)
-2. **`projects/website-orchestrator/memory/keyword-page-map.md`** — Tier 1-3 SEO keywords (use these as topic seeds)
-3. **`projects/website-orchestrator/memory/keyword-research.md`** — search volume and competition data
-4. **WordPress last 20 posts** — most recent published blog posts:
+## Pre-Flight: Read ALL of These BEFORE generating recommendations
+
+1. **`projects/blog-post/master-log.json`** — all posts from the last 90 days
+2. **`projects/website-orchestrator/memory/keyword-page-map.md`** — Tier 1-3 SEO keywords
+3. **`projects/website-orchestrator/memory/keyword-research.md`** — search volume and competition
+4. **WordPress last 25 published blog posts** — actual published titles and topics:
    ```
-   node /home/ethan/.openclaw/workspace/skills/wordpress/scripts/wp-cli.js posts:list --query post_type=post,per_page=20,status=publish
+   node /home/ethan/.openclaw/workspace/skills/wordpress/scripts/wp-cli.js posts:list --query post_type=post,per_page=25,status=publish
    ```
-5. **Current date** — factor in seasonal relevance (New Year: Jan, Obesity Week: March, summer: May-June, back-to-school: Aug, OMA conference: Oct-Nov)
+   Read ALL 25 titles. Identify patterns: what categories are oversaturated? What's missing?
+5. **Seasonal calendar** — factor in timing (New Year: Jan, Obesity Week: March, summer: May-June, back-to-school: Aug, OMA conference: Oct-Nov)
 
-## Topic Generation Rules
-- **SEO-first**: Every topic must map to a keyword in the keyword-page-map with meaningful search volume or low competition opportunity
-- **Colorado/Denver anchor**: Each topic must have a natural local tie-in (Denver, Greenwood Village, Front Range, Colorado, Mile High)
-- **Patient-facing**: Topics should be things a patient considering CNC would search (not purely academic)
-- **No duplication**: Topics covered in the last 60 days are disqualified
-- **Diversity**: Aim for variety across categories: Medical (GLP-1, medications), Nutritional (diet strategies), Lifestyle (exercise, sleep), Behavioral (mindset, habits)
+## Topic Research Process (Do This Before Writing Recommendations)
 
-## Priority Keyword Targets (from keyword-page-map.md — use these first)
-1. "medical weight loss denver" — Tier 1, own this
-2. "registered dietitian near me" — 6,600 searches, huge opportunity
-3. "wegovy vs zepbound" — comparison, low competition, high intent
-4. "telehealth weight loss denver" — emerging, first-mover
-5. "nutritionist in denver" / "dietitian denver" — 390 searches, low competition
-6. "highlands ranch weight loss" — geo expansion
-7. "glp-1 side effects" — high volume, patient concern
-8. "protein on GLP-1" — high engagement, CNC already strong here
+### Step 1: Audit the Last 25 Posts
+For each of the last 25 posts, note:
+- Title
+- Category (Medical/Nutritional/Lifestyle/Behavioral)
+- Keyword targeted
+
+Then ask: **What is genuinely missing from this list?**
+- Which categories are oversaturated?
+- Which SEO keywords from keyword-page-map are NOT covered?
+- What would a real patient in Denver actually search for that CNC hasn't addressed?
+
+### Step 2: Find the Gaps
+Cross-reference the last 25 titles against the priority keyword list. Look for:
+- High-volume keywords with NO post (wegovy vs zepbound, telehealth weight loss denver)
+- Patient questions that haven't been answered (side effects, what to eat, how to titrate)
+- Colorado-specific angles on topics CNC HAS covered generically
+
+### Step 3: Pick 3 Topics from Real Gaps
+Recommend only topics that:
+1. Map to an actual keyword in keyword-page-map with real search volume
+2. Fill a genuine gap in the last 25 posts (no similar titles)
+3. Have a natural Colorado/Denver anchor
+4. Are genuinely interesting to a patient — not just "good for SEO"
 
 ## Output Format
 Save to `projects/blog-post/posts/YYYY-MM-DD/topic-recommendations.json`:
 ```json
 {
   "date": "YYYY-MM-DD",
+  "audit_of_last_25": "Brief note: what categories are oversaturated, what's missing",
   "recommendations": [
     {
       "rank": 1,
@@ -46,22 +58,35 @@ Save to `projects/blog-post/posts/YYYY-MM-DD/topic-recommendations.json`:
       "primary_keyword": "...",
       "colorado_anchor": "...",
       "seo_tier": "Tier 1|2|3",
-      "search_volume_note": "...",
-      "rationale": "Why this topic, why now",
-      "category": "Medical|Nutritional|Lifestyle|Behavioral"
-    },
-    { "rank": 2, ... },
-    { "rank": 3, ... }
+      "rationale": "Why THIS topic now, what's missing from last 25 posts",
+      "category": "Medical|Nutritional|Lifestyle|Behavioral",
+      "has_blog_potential": true
+    }
   ],
   "selected": null,
   "status": "AWAITING_APPROVAL"
 }
 ```
 
-The orchestrator will auto-select rank 1 unless Dr. Lazarus overrides.
+## Priority Keywords — Target These First (from keyword-page-map)
+| Keyword | Monthly Searches | Status in Last 25 Posts? |
+|---|---|---|
+| medical weight loss denver | geo | ??? |
+| registered dietitian near me | 6,600 | Done Apr 16 |
+| wegovy vs zepbound | low comp | ??? |
+| telehealth weight loss denver | emerging | ??? |
+| nutritionist in denver | 390 | ??? |
+| glp-1 side effects | high | ??? |
+| highlands ranch weight loss | geo | ??? |
+
+## Rules
+- **No duplication within 90 days**
+- **Must fill a real gap** — not a variation of a recent post
+- **Colorado anchor** required
+- **Genuinely interesting** to a real patient — not just keyword-stuffed
+
+## If All Gaps Are Covered
+If every priority keyword is already in the last 25 posts, output `ABORT_WORKFLOW` with a note listing what's already covered. Do NOT force a topic.
 
 ## Model
 `minimax/MiniMax-M2.7`
-
-## If No Topic Found
-If all priority keywords are covered in the last 60 days and no seasonal opportunity exists, output `ABORT_WORKFLOW` with a note.
